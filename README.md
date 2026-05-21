@@ -4,6 +4,146 @@ zygo-dataX is a Python package, CLI, web service, container image, and Windows G
 
 The current implementation is calibrated for flat mirror / rectangular aperture workflows where the DATX native surface values are stored in fringes.
 
+## Windows GUI Installation
+
+This is the recommended first path for Windows users. The Windows GUI starts the same local web service used by the container and opens the browser automatically.
+
+### 1. Install Prerequisites
+
+Install these first:
+
+- Windows 10/11
+- Python 3.10 or newer from <https://www.python.org/downloads/windows/>
+- Git for Windows from <https://git-scm.com/download/win>
+
+During Python installation, enable **Add python.exe to PATH**.
+
+Optional installer build:
+
+- Inno Setup 6 from <https://jrsoftware.org/isinfo.php>
+
+### 2. Clone The Repository
+
+Open PowerShell and run:
+
+```powershell
+git clone https://github.com/YonggangG/zygo-datax.git
+cd zygo-datax
+```
+
+### 3. Build The Windows GUI Launcher
+
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\build_windows_launcher.ps1
+```
+
+This creates:
+
+```text
+dist\zygo-dataX\zygo-dataX.exe
+```
+
+### 4. Run The GUI
+
+Run:
+
+```powershell
+.\dist\zygo-dataX\zygo-dataX.exe
+```
+
+The launcher starts a local server and opens a browser, usually at:
+
+```text
+http://127.0.0.1:8017
+```
+
+If port `8017` is busy, the launcher tries ports `8020` through `8099`.
+
+### 5. Build A Portable ZIP
+
+After building the launcher, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_portable.ps1
+```
+
+Output:
+
+```text
+dist\release\zygo-dataX-0.1.0-portable.zip
+```
+
+Use:
+
+1. Unzip the portable ZIP.
+2. Double-click `zygo-dataX.exe`.
+3. Upload a DATX file in the browser.
+4. Run analysis and download the generated report/Zemax files.
+
+### 6. Build A Windows Installer
+
+Requires Inno Setup 6:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_installer.ps1
+```
+
+Output:
+
+```text
+dist\installer\zygo-dataX-Setup-0.1.0.exe
+```
+
+Use:
+
+1. Run the installer.
+2. Launch zygo-dataX from the Start Menu.
+3. The local browser UI opens automatically.
+4. Upload a DATX file and run analysis.
+
+Cross-building a real Windows executable from Linux is not reliable with PyInstaller. Build final Windows artifacts on Windows.
+
+## Installation From Source
+
+Use this path for Linux/macOS development or when you want direct CLI access without building the Windows executable.
+
+```bash
+git clone https://github.com/YonggangG/zygo-datax.git
+cd zygo-datax
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+On Windows PowerShell, the equivalent virtualenv activation is:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+Run a smoke check:
+
+```bash
+python -m compileall src tests
+python -m pytest tests
+```
+
+## Web Interface Screenshots
+
+Input state after choosing a DATX file. The web UI reads DATX metadata and auto-fills the suggested aperture/crop values.
+
+![zygo-dataX web input auto-fill](docs/images/web-input-autofill.png)
+
+Output state after analysis. The page shows DATX structure, metrics, maps, summary, and downloads for analysis and Zemax artifacts.
+
+![zygo-dataX web analysis output](docs/images/web-output-results.png)
+
 ## Features
 
 - Read Zygo DATX / HDF5 files.
@@ -23,10 +163,10 @@ The current implementation is calibrated for flat mirror / rectangular aperture 
 - Write Zemax Grid Sag DAT files.
 - Write Zemax Extended Polynomial TXT/CSV coefficient files.
 - Run as:
+  - Windows GUI launcher executable
   - Python CLI
   - FastAPI web service
   - Docker / Portainer container
-  - Windows GUI launcher executable
 
 ## Package Structure
 
@@ -37,6 +177,9 @@ zygo-dataX/
 ├── pyproject.toml
 ├── README.md
 ├── docs/
+│   ├── images/
+│   │   ├── web-input-autofill.png
+│   │   └── web-output-results.png
 │   ├── portainer-deployment.md
 │   ├── windows-gui.md
 │   └── windows-release.md
@@ -100,7 +243,7 @@ Valid aperture bbox px:     [192, 342, 739, 906]
 Valid aperture size:        42.7153 x 44.0428 mm
 ```
 
-## Surface And Metric Conventions
+## Algorithm And Surface Conventions
 
 DATX native surface values are preserved as fringes.
 
@@ -110,6 +253,21 @@ For reflective flat mirror surface sag:
 surface_lambda = native_fringes * 0.5
 sag_mm = native_fringes * 0.5 * wavelength_nm * 1e-6
 ```
+
+Main analysis flow:
+
+1. Open the DATX/HDF5 file with `h5py`.
+2. Discover numeric 2D datasets.
+3. Select the primary surface and intensity datasets.
+4. Read no-data metadata and construct a valid aperture mask.
+5. Read wavelength and lateral resolution metadata.
+6. Convert the requested physical aperture size from mm to pixels.
+7. Crop a rectangular report aperture with optional dx/dy offset and edge trim.
+8. Fit and remove low-order polynomial terms:
+   - piston + tilt for the main report map
+   - piston + tilt + power for irregularity
+9. Convert native fringes to reflection surface lambda and sag in mm.
+10. Generate metrics, maps, Zernike-equivalent terms, and Zemax exports.
 
 Report metrics use the reflection surface convention in lambda:
 
@@ -133,31 +291,6 @@ The web form and CLI aperture/crop options control which rectangular report area
 - `edge trim px` / `--edge-trim-px`: trims this many pixels from each side of the aperture after sizing and centering. Use this to remove unstable edge pixels or to match a Zygo PDF report area that is slightly smaller than the DATX valid mask.
 
 In short: aperture width/height controls the physical size, `dx_px` and `dy_px` control position, and `edge_trim_px` tightens the border. The web UI initializes aperture width/height from the DATX valid aperture and sets `dx_px=0`, `dy_px=0`, and `edge_trim_px=0`. Matching a Zygo PDF exactly may require adjusting these values against the PDF Size X/Y, P-V, and Power.
-
-## Installation From Source
-
-Requirements:
-
-- Python 3.10 or newer
-- A normal C/Python scientific stack capable of installing `numpy`, `h5py`, and `matplotlib`
-
-Install editable:
-
-```bash
-git clone https://github.com/YonggangG/zygo-datax.git
-cd zygo-datax
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e .
-```
-
-Run a smoke check:
-
-```bash
-python -m compileall src tests
-python -m pytest tests
-```
 
 ## CLI Usage
 
@@ -444,73 +577,6 @@ In Portainer:
    ```
 
 7. Deploy.
-
-## Windows GUI Installation
-
-The Windows GUI is a small executable that starts the same local FastAPI web service and opens the browser automatically. It uses the same core engine as the CLI and container.
-
-### Build Requirements
-
-- Windows 10/11
-- Python 3.10 or newer
-- Internet access for first-time dependency installation
-- Optional for installer: Inno Setup 6
-
-### Build The Windows Launcher
-
-From the project root on Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\windows\build_windows_launcher.ps1
-```
-
-Output:
-
-```text
-dist\zygo-dataX\zygo-dataX.exe
-```
-
-### Build Portable ZIP
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_portable.ps1
-```
-
-Output:
-
-```text
-dist\release\zygo-dataX-0.1.0-portable.zip
-```
-
-Install/use:
-
-1. Unzip the portable ZIP.
-2. Double-click `zygo-dataX.exe`.
-3. Browser opens at `http://127.0.0.1:8017` or another free local port.
-4. Upload a DATX file and run analysis.
-
-### Build Installer
-
-Requires Inno Setup 6:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_installer.ps1
-```
-
-Output:
-
-```text
-dist\installer\zygo-dataX-Setup-0.1.0.exe
-```
-
-Install/use:
-
-1. Run the installer.
-2. Launch zygo-dataX from the Start Menu.
-3. The local web UI opens in the browser.
-4. Upload a DATX file and run analysis.
-
-Cross-building a real Windows executable from Linux is not reliable with PyInstaller. Build final Windows artifacts on Windows.
 
 ## Validation Status
 
