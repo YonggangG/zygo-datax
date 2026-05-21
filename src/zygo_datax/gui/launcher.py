@@ -80,7 +80,14 @@ class ZygoDataXLauncher:
     def start(self) -> None:
         os.environ.setdefault("MPLBACKEND", "Agg")
         os.environ.setdefault("ZYGO_DATAX_RUN_ROOT", str(Path.cwd() / "runs"))
-        config = uvicorn.Config(app, host="127.0.0.1", port=self.port, log_level="warning")
+        config = uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=self.port,
+            log_level="warning",
+            log_config=None,
+            access_log=False,
+        )
         self.server = uvicorn.Server(config)
         self.thread = threading.Thread(target=self.server.run, daemon=True)
         self.thread.start()

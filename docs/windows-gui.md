@@ -41,3 +41,16 @@ dist\zygo-dataX\zygo-dataX.exe
 - If port `8017` is busy, the launcher tries ports `8020` through `8099`.
 - Results are written to a local `runs` folder next to the working directory.
 - This is a Windows executable build recipe. Cross-building a real Windows `.exe` from Linux is not reliable with PyInstaller; build the final `.exe` on Windows.
+
+## Troubleshooting
+
+### Unable to configure formatter 'default'
+
+Older builds could fail at startup with:
+
+```text
+ValueError: Unable to configure formatter 'default'
+AttributeError: 'NoneType' object has no attribute 'isatty'
+```
+
+This happens when PyInstaller runs the GUI without a console and Uvicorn's default logging formatter tries to inspect a missing stderr stream. Rebuild from current source; the launcher now starts Uvicorn with `log_config=None` and `access_log=False`.
