@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zygo-dataX"
+version = "0.1.0"
+description = "Analyze Zygo DATX files, generate wavefront/fringe reports, and export Zemax Grid Sag / Extended Polynomial data."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.111",
+  "h5py>=3.10",
+  "jinja2>=3.1",
+  "matplotlib>=3.8",
+  "numpy>=1.26",
+  "python-multipart>=0.0.9",
+  "uvicorn[standard]>=0.30",
+]
+
+[project.scripts]
+zygo-datax = "zygo_datax.cli:main"
+zygo-datax-launcher = "zygo_datax.gui.launcher:main"
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=8.0",
+]
+windows = [
+  "pyinstaller>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/YonggangG/zygo-datax"
+Repository = "https://github.com/YonggangG/zygo-datax"
+Issues = "https://github.com/YonggangG/zygo-datax/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

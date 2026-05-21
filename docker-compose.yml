@@ -1,0 +1,18 @@
+services:
+  zygo-datax:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zygo-datax:latest
+    container_name: zygo-datax
+    restart: unless-stopped
+    ports:
+      - "8017:8000"
+    environment:
+      ZYGO_DATAX_RUN_ROOT: /app/runs
+      MPLBACKEND: Agg
+    volumes:
+      - zygo-datax-runs:/app/runs
+
+volumes:
+  zygo-datax-runs:
