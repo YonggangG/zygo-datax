@@ -125,17 +125,12 @@ class DatxZemaxExportResult:
     map_kind: str
     aperture_bbox_pixels: list[int]
     grid_sag_dat: str
-    xy_polynomial_txt: str
-    xy_polynomial_csv: str
     readme_txt: str
     nx: int
     ny: int
     dx_mm: float
     dy_mm: float
     z_unit: str
-    xy_order: int
-    fit_rms_mm: float
-    fit_pv_mm: float
     caution: str
 
 
@@ -609,20 +604,36 @@ def _save_intensity_fringe_pattern(path: Path, intensity: np.ndarray, mask: np.n
     plt.close()
 
 
-def _zernike_basis(x: np.ndarray, y: np.ndarray) -> list[tuple[int, str, np.ndarray]]:
+def _zernike_basis(x: np.ndarray, y: np.ndarray) -> list[dict[str, int | str | np.ndarray]]:
     r2 = x * x + y * y
+    r4 = r2 * r2
+    sqrt3 = np.sqrt(3.0)
+    sqrt5 = np.sqrt(5.0)
+    sqrt6 = np.sqrt(6.0)
+    sqrt8 = np.sqrt(8.0)
+    sqrt10 = np.sqrt(10.0)
+    sqrt12 = np.sqrt(12.0)
     return [
-        (1, "Piston", np.ones_like(x)),
-        (2, "Tilt X", x),
-        (3, "Tilt Y", y),
-        (4, "Defocus", 2 * r2 - 1),
-        (5, "Astig 45", 2 * x * y),
-        (6, "Astig 0", x * x - y * y),
-        (7, "Coma X", (3 * r2 - 2) * x),
-        (8, "Coma Y", (3 * r2 - 2) * y),
-        (9, "Trefoil X", x**3 - 3 * x * y * y),
-        (10, "Trefoil Y", 3 * x * x * y - y**3),
-        (11, "Primary Spherical", 6 * r2 * r2 - 6 * r2 + 1),
+        {"term": 1, "name": "Piston", "radial_degree": 0, "azimuthal_degree": 0, "zj_expression": "1", "values": np.ones_like(x)},
+        {"term": 2, "name": "Tilt X", "radial_degree": 1, "azimuthal_degree": 1, "zj_expression": "2*rho*cos(phi)", "values": 2 * x},
+        {"term": 3, "name": "Tilt Y", "radial_degree": 1, "azimuthal_degree": -1, "zj_expression": "2*rho*sin(phi)", "values": 2 * y},
+        {"term": 4, "name": "Defocus", "radial_degree": 2, "azimuthal_degree": 0, "zj_expression": "sqrt(3)*(2*rho^2 - 1)", "values": sqrt3 * (2 * r2 - 1)},
+        {"term": 5, "name": "Oblique astigmatism", "radial_degree": 2, "azimuthal_degree": -2, "zj_expression": "sqrt(6)*rho^2*sin(2*phi)", "values": sqrt6 * (2 * x * y)},
+        {"term": 6, "name": "Vertical astigmatism", "radial_degree": 2, "azimuthal_degree": 2, "zj_expression": "sqrt(6)*rho^2*cos(2*phi)", "values": sqrt6 * (x * x - y * y)},
+        {"term": 7, "name": "Vertical coma", "radial_degree": 3, "azimuthal_degree": -1, "zj_expression": "sqrt(8)*(3*rho^3 - 2*rho)*sin(phi)", "values": sqrt8 * (3 * r2 - 2) * y},
+        {"term": 8, "name": "Horizontal coma", "radial_degree": 3, "azimuthal_degree": 1, "zj_expression": "sqrt(8)*(3*rho^3 - 2*rho)*cos(phi)", "values": sqrt8 * (3 * r2 - 2) * x},
+        {"term": 9, "name": "Vertical trefoil", "radial_degree": 3, "azimuthal_degree": -3, "zj_expression": "sqrt(8)*rho^3*sin(3*phi)", "values": sqrt8 * (3 * x * x * y - y**3)},
+        {"term": 10, "name": "Oblique trefoil", "radial_degree": 3, "azimuthal_degree": 3, "zj_expression": "sqrt(8)*rho^3*cos(3*phi)", "values": sqrt8 * (x**3 - 3 * x * y * y)},
+        {"term": 11, "name": "Primary spherical", "radial_degree": 4, "azimuthal_degree": 0, "zj_expression": "sqrt(5)*(6*rho^4 - 6*rho^2 + 1)", "values": sqrt5 * (6 * r4 - 6 * r2 + 1)},
+        {"term": 12, "name": "Vertical secondary astigmatism", "radial_degree": 4, "azimuthal_degree": 2, "zj_expression": "sqrt(10)*(4*rho^4 - 3*rho^2)*cos(2*phi)", "values": sqrt10 * (4 * r2 - 3) * (x * x - y * y)},
+        {"term": 13, "name": "Oblique secondary astigmatism", "radial_degree": 4, "azimuthal_degree": -2, "zj_expression": "sqrt(10)*(4*rho^4 - 3*rho^2)*sin(2*phi)", "values": sqrt10 * (4 * r2 - 3) * (2 * x * y)},
+        {"term": 14, "name": "Vertical quadrafoil", "radial_degree": 4, "azimuthal_degree": 4, "zj_expression": "sqrt(10)*rho^4*cos(4*phi)", "values": sqrt10 * (x**4 - 6 * x * x * y * y + y**4)},
+        {"term": 15, "name": "Oblique quadrafoil", "radial_degree": 4, "azimuthal_degree": -4, "zj_expression": "sqrt(10)*rho^4*sin(4*phi)", "values": sqrt10 * (4 * x * y * (x * x - y * y))},
+        {"term": 16, "name": "Secondary coma X", "radial_degree": 5, "azimuthal_degree": 1, "zj_expression": "sqrt(12)*(10*rho^5 - 12*rho^3 + 3*rho)*cos(phi)", "values": sqrt12 * (10 * r4 - 12 * r2 + 3) * x},
+        {"term": 17, "name": "Secondary coma Y", "radial_degree": 5, "azimuthal_degree": -1, "zj_expression": "sqrt(12)*(10*rho^5 - 12*rho^3 + 3*rho)*sin(phi)", "values": sqrt12 * (10 * r4 - 12 * r2 + 3) * y},
+        {"term": 18, "name": "Secondary trefoil X", "radial_degree": 5, "azimuthal_degree": 3, "zj_expression": "sqrt(12)*(5*rho^5 - 4*rho^3)*cos(3*phi)", "values": sqrt12 * (5 * r2 - 4) * (x**3 - 3 * x * y * y)},
+        {"term": 19, "name": "Secondary trefoil Y", "radial_degree": 5, "azimuthal_degree": -3, "zj_expression": "sqrt(12)*(5*rho^5 - 4*rho^3)*sin(3*phi)", "values": sqrt12 * (5 * r2 - 4) * (3 * x * x * y - y**3)},
+        {"term": 20, "name": "Pentafoil X", "radial_degree": 5, "azimuthal_degree": 5, "zj_expression": "sqrt(12)*rho^5*cos(5*phi)", "values": sqrt12 * (x**5 - 10 * x**3 * y * y + 5 * x * y**4)},
     ]
 
 
@@ -635,23 +646,26 @@ def _fit_zernike_equivalent(surface_lambda: np.ndarray, mask: np.ndarray, wavele
     y = -((yy / max(h - 1, 1)) * 2 - 1)
     z = surface_lambda[yy, xx]
     basis = _zernike_basis(x, y)
-    matrix = np.column_stack([col for _idx, _name, col in basis])
+    matrix = np.column_stack([item["values"] for item in basis])
     coeff, *_ = np.linalg.lstsq(matrix, z, rcond=None)
 
     gy, gx = np.indices(surface_lambda.shape)
     gx = (gx / max(w - 1, 1)) * 2 - 1
     gy = -((gy / max(h - 1, 1)) * 2 - 1)
     full_basis = _zernike_basis(gx.ravel(), gy.ravel())
-    full_matrix = np.column_stack([col for _idx, _name, col in full_basis])
+    full_matrix = np.column_stack([item["values"] for item in full_basis])
     fit = (full_matrix @ coeff).reshape(surface_lambda.shape)
 
     rows: list[dict[str, float | int | str]] = []
-    for (idx, name, _col), value in zip(basis, coeff):
+    for item, value in zip(basis, coeff):
         coeff_lambda = float(value)
         rows.append(
             {
-                "term": idx,
-                "name": name,
+                "term": item["term"],
+                "name": item["name"],
+                "radial_degree": item["radial_degree"],
+                "azimuthal_degree": item["azimuthal_degree"],
+                "zj_expression": item["zj_expression"],
                 "coefficient_surface_lambda": coeff_lambda,
                 "coefficient_surface_nm": coeff_lambda * wavelength_nm,
                 "coefficient_sag_mm": coeff_lambda * wavelength_nm * 1e-6,
@@ -667,6 +681,9 @@ def _write_zernike_csv(path: Path, rows: list[dict[str, float | int | str]]) -> 
             fieldnames=[
                 "term",
                 "name",
+                "radial_degree",
+                "azimuthal_degree",
+                "zj_expression",
                 "coefficient_surface_lambda",
                 "coefficient_surface_nm",
                 "coefficient_sag_mm",
@@ -990,21 +1007,6 @@ def _fit_surface_for_kind(surface: np.ndarray, mask: np.ndarray, map_kind: str) 
     raise ValueError("map_kind must be raw, tilt_removed, or irregularity")
 
 
-def _xy_terms(order: int) -> list[tuple[int, int]]:
-    terms: list[tuple[int, int]] = []
-    for total in range(1, order + 1):
-        for ix in range(total, -1, -1):
-            terms.append((ix, total - ix))
-    return terms
-
-
-def _zemax_extended_poly_index(ix: int, iy: int) -> int:
-    total = ix + iy
-    if total < 1:
-        raise ValueError("Zemax Extended Polynomial terms start at first order; no constant term exists")
-    return ((total - 1) * (total + 2)) // 2 + iy + 1
-
-
 def _write_grid_sag(path: Path, sag_mm: np.ndarray, valid_mask: np.ndarray, dx_mm: float, dy_mm: float) -> None:
     valid = np.asarray(valid_mask, dtype=bool) & np.isfinite(sag_mm)
     arr = np.where(valid, sag_mm, 0.0)
@@ -1026,58 +1028,6 @@ def _write_grid_sag(path: Path, sag_mm: np.ndarray, valid_mask: np.ndarray, dx_m
         f.write("\n")
 
 
-def _write_xy_polynomial(
-    txt_path: Path,
-    csv_path: Path,
-    sag_mm: np.ndarray,
-    valid_mask: np.ndarray,
-    dx_mm: float,
-    dy_mm: float,
-    order: int,
-) -> tuple[float, float]:
-    yy, xx = np.where(valid_mask & np.isfinite(sag_mm))
-    z = sag_mm[yy, xx]
-    ny, nx = sag_mm.shape
-    x_mm = (xx - (nx - 1) / 2) * dx_mm
-    y_mm = (yy - (ny - 1) / 2) * dy_mm
-    norm_radius_mm = max((nx - 1) * dx_mm, (ny - 1) * dy_mm) / 2
-    if norm_radius_mm <= 0:
-        raise ValueError("Invalid XY polynomial normalization radius")
-    x_norm = x_mm / norm_radius_mm
-    y_norm = y_mm / norm_radius_mm
-    piston_mm = float(np.nanmean(z))
-    z_fit = z - piston_mm
-    terms = _xy_terms(order)
-    matrix = np.column_stack([(x_norm ** ix) * (y_norm ** iy) for ix, iy in terms])
-    coeff, *_ = np.linalg.lstsq(matrix, z_fit, rcond=None)
-    residual = z_fit - matrix @ coeff
-    fit_rms = float(np.nanstd(residual - np.nanmean(residual)))
-    fit_pv = float(np.nanmax(residual) - np.nanmin(residual))
-    with csv_path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["zemax_term_index", "term", "x_power", "y_power", "coefficient_Ai_mm"])
-        for (ix, iy), value in zip(terms, coeff):
-            zemax_idx = _zemax_extended_poly_index(ix, iy)
-            writer.writerow([zemax_idx, f"E{zemax_idx}", ix, iy, f"{value:.12e}"])
-    with txt_path.open("w", encoding="utf-8") as f:
-        f.write("Zemax Extended Polynomial fit reference\n")
-        f.write("Formula: z = base conic + sum(Ai * Ei(x_norm, y_norm)); no constant polynomial term exists.\n")
-        f.write("Coordinate convention: x/y are local aperture coordinates in mm, centered on the exported grid.\n")
-        f.write("Normalization: x_norm=x_mm/Rnorm, y_norm=y_mm/Rnorm. Set Zemax normalization radius to Rnorm.\n")
-        f.write("Sag convention: z is reflection surface sag in mm.\n")
-        f.write(f"Order: {order}\n")
-        f.write(f"Normalization radius Rnorm mm: {norm_radius_mm:.12e}\n")
-        f.write(f"Removed piston/constant sag mm: {piston_mm:.12e}\n")
-        f.write(f"Residual RMS mm: {fit_rms:.12e}\n")
-        f.write(f"Residual PV mm: {fit_pv:.12e}\n\n")
-        f.write("Terms follow Zemax Extended Polynomial ordering: E1=x, E2=y, E3=x^2, E4=xy, E5=y^2, ...\n")
-        f.write("A0 / c_x0_y0 is intentionally not exported because Zemax has no constant polynomial coefficient.\n\n")
-        for (ix, iy), value in zip(terms, coeff):
-            zemax_idx = _zemax_extended_poly_index(ix, iy)
-            f.write(f"A{zemax_idx:03d}: E{zemax_idx}=x^{ix} y^{iy} = {value:.12e} mm\n")
-    return fit_rms, fit_pv
-
-
 def export_datx_zemax(
     datx_path: str | Path,
     output_dir: str | Path,
@@ -1087,9 +1037,8 @@ def export_datx_zemax(
     dx_px: int = 0,
     dy_px: int = 0,
     edge_trim_px: int = 0,
-    xy_order: int = 4,
 ) -> DatxZemaxExportResult:
-    """Export a DATX surface map as Zemax Grid Sag plus XY polynomial files."""
+    """Export a DATX surface map as a Zemax Grid Sag DAT file."""
     datx_path = Path(datx_path)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1115,11 +1064,8 @@ def export_datx_zemax(
     dy_mm = lateral_m * 1e3
 
     grid_path = output_dir / f"zemax_grid_sag_{map_kind}.DAT"
-    xy_txt = output_dir / f"zemax_xy_polynomial_order{xy_order}_{map_kind}.txt"
-    xy_csv = output_dir / f"zemax_xy_polynomial_order{xy_order}_{map_kind}.csv"
     readme = output_dir / "zemax_export_readme.txt"
     _write_grid_sag(grid_path, cropped_sag_mm, cropped_mask, dx_mm, dy_mm)
-    fit_rms, fit_pv = _write_xy_polynomial(xy_txt, xy_csv, cropped_sag_mm, cropped_mask, dx_mm, dy_mm, xy_order)
     readme.write_text(
         "\n".join(
             [
@@ -1137,9 +1083,8 @@ def export_datx_zemax(
                 "Data order: upper-left first (-x,+y), then left-to-right by row.",
                 "Z values are reflection surface sag in mm, using DATX native fringes * 0.5 * wavelength.",
                 "Invalid/outside-aperture pixels are written as 0 0 0 0 1.",
-                "Extended Polynomial coordinates use x_norm=x_mm/Rnorm and y_norm=y_mm/Rnorm; set Zemax normalization radius to the Rnorm printed in the TXT file.",
-                "Extended Polynomial has no constant/piston coefficient; the TXT file reports the removed piston separately.",
-                "Recommended first Zemax path: use Grid Sag for the square/rectangular measured map; use XY polynomial only when a parametric approximation is required.",
+                "Only Grid Sag DAT is generated; fitted continuous Zemax surface approximations are not exported.",
+                "Recommended Zemax path: use Grid Sag for the square/rectangular measured map.",
             ]
         )
         + "\n",
@@ -1152,17 +1097,12 @@ def export_datx_zemax(
         map_kind=map_kind,
         aperture_bbox_pixels=bbox,
         grid_sag_dat=str(grid_path),
-        xy_polynomial_txt=str(xy_txt),
-        xy_polynomial_csv=str(xy_csv),
         readme_txt=str(readme),
         nx=int(cropped_sag_mm.shape[1]),
         ny=int(cropped_sag_mm.shape[0]),
         dx_mm=float(dx_mm),
         dy_mm=float(dy_mm),
         z_unit="mm",
-        xy_order=xy_order,
-        fit_rms_mm=fit_rms,
-        fit_pv_mm=fit_pv,
         caution="Grid Sag format is intended for Zemax/OpticStudio import. Confirm aperture, sign, and reflection convention inside Zemax with a known sample.",
     )
 
@@ -1334,7 +1274,7 @@ def generate_datx_wavefront_report(
         report_json=str(report_json),
         report_html=str(report_html),
         summary_png=str(summary_png),
-        caution="Fringe panel uses DATX Intensity when present; Zernike terms are rectangular-aperture least-squares equivalents for comparison, not strict circular orthogonal Zygo coefficients.",
+        caution="Fringe panel uses DATX Intensity when present; Zernike terms use normalized Noll-index Zj expressions but are fitted over the rectangular report aperture, so they are comparison equivalents rather than strict circular orthogonal Zygo coefficients.",
     )
     payload = asdict(result) | {"zernike_terms": zernike_rows}
     report_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -1342,6 +1282,9 @@ def generate_datx_wavefront_report(
         "<tr>"
         f"<td>{html.escape(str(row['term']))}</td>"
         f"<td>{html.escape(str(row['name']))}</td>"
+        f"<td>{html.escape(str(row['radial_degree']))}</td>"
+        f"<td>{html.escape(str(row['azimuthal_degree']))}</td>"
+        f"<td>{html.escape(str(row['zj_expression']))}</td>"
         f"<td>{float(row['coefficient_surface_lambda']):+.6f}</td>"
         f"<td>{float(row['coefficient_surface_nm']):+.3f}</td>"
         "</tr>"
@@ -1350,13 +1293,13 @@ def generate_datx_wavefront_report(
     report_html.write_text(
         f"""<!doctype html>
 <html lang=\"en\"><head><meta charset=\"utf-8\"><title>DATX Wavefront Report</title>
-<style>body{{font-family:Arial,sans-serif;max-width:1100px;margin:32px auto;line-height:1.45}}img{{max-width:100%;border:1px solid #ddd}}table{{border-collapse:collapse}}td,th{{border:1px solid #ddd;padding:6px 8px;text-align:right}}td:nth-child(2),th:nth-child(2){{text-align:left}}</style></head>
+<style>body{{font-family:Arial,sans-serif;max-width:1100px;margin:32px auto;line-height:1.45}}img{{max-width:100%;border:1px solid #ddd}}table{{border-collapse:collapse}}td,th{{border:1px solid #ddd;padding:6px 8px;text-align:right}}td:nth-child(2),th:nth-child(2),td:nth-child(5),th:nth-child(5){{text-align:left}}</style></head>
 <body><h1>DATX Wavefront Report</h1>
 <p>Dataset: <code>{html.escape(selected.path)}</code>; wavelength {wl_nm:.3f} nm; aperture bbox {bbox}.</p>
 <p>P-V {computed_values['pv_surface_lambda']:.4f} λ, RMS {computed_values['rms_surface_lambda']:.4f} λ, Power {computed_values['power_surface_lambda']:.4f} λ, Irregularity {computed_values['irregularity_surface_lambda']:.4f} λ.</p>
 <p><img src=\"{summary_png.name}\" alt=\"summary\"></p>
 <h2>Zernike-equivalent terms</h2>
-<table><thead><tr><th>Term</th><th>Name</th><th>Coeff λ surface</th><th>Coeff nm surface</th></tr></thead><tbody>{rows}</tbody></table>
+<table><thead><tr><th>Noll</th><th>Name</th><th>n</th><th>m</th><th>Zj expression</th><th>Coeff λ surface</th><th>Coeff nm surface</th></tr></thead><tbody>{rows}</tbody></table>
 <p><strong>Caution:</strong> {html.escape(result.caution)}</p>
 </body></html>
 """,

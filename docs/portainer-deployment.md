@@ -118,7 +118,6 @@ Each upload creates a run folder containing:
 - web result JSON
 - wavefront/fringe/Zernike analysis files
 - Zemax Grid Sag DAT
-- Extended Polynomial TXT/CSV
 - full ZIP bundle
 
 ## Change External Port

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zygo-dataX"
-version = "0.1.0"
-description = "Analyze Zygo DATX files, generate wavefront/fringe reports, and export Zemax Grid Sag / Extended Polynomial data."
+version = "0.1.1"
+description = "Analyze Zygo DATX files, generate wavefront/fringe reports, and export Zemax Grid Sag data."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

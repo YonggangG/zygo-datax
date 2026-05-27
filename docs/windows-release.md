@@ -16,7 +16,7 @@ Best for engineering/internal use.
 Output:
 
 ```text
-dist\release\zygo-dataX-0.1.0-portable.zip
+dist\release\zygo-dataX-0.1.1-portable.zip
 ```
 
 ### Installer
@@ -32,7 +32,7 @@ Best for normal Windows users.
 Output:
 
 ```text
-dist\installer\zygo-dataX-Setup-0.1.0.exe
+dist\installer\zygo-dataX-Setup-0.1.1.exe
 ```
 
 ## Build Order On Windows
@@ -61,14 +61,13 @@ The installer build requires Inno Setup 6.
 5. Upload Side 4 DATX and run analysis.
 6. Confirm maps/fringe image render.
 7. Confirm Grid Sag DAT download exists.
-8. Confirm Extended Polynomial TXT/CSV downloads exist.
-9. Confirm full ZIP download contains analysis and Zemax files.
-10. Build portable ZIP.
-11. Extract portable ZIP to a clean folder and run again.
-12. Build installer if needed.
-13. Install on a clean Windows machine or VM.
-14. Confirm Start Menu shortcut launches the app.
-15. Uninstall and confirm app folder is removed.
+8. Confirm full ZIP download contains analysis and Zemax files.
+9. Build portable ZIP.
+10. Extract portable ZIP to a clean folder and run again.
+11. Build installer if needed.
+12. Install on a clean Windows machine or VM.
+13. Confirm Start Menu shortcut launches the app.
+14. Uninstall and confirm app folder is removed.
 
 ## Notes
 

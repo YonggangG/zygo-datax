@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Set-Location $Root
 
-$Version = "0.1.0"
+$Version = "0.1.1"
 $AppName = "zygo-dataX"
 $DistApp = Join-Path $Root "dist\zygo-dataX"
 $ReleaseDir = Join-Path $Root "dist\release"

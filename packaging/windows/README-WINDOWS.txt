@@ -2,7 +2,7 @@ zygo-dataX for Windows
 ======================
 
 zygo-dataX analyzes Zygo DATX files, generates wavefront/fringe reports,
-and exports Zemax Grid Sag / Extended Polynomial files.
+and exports Zemax Grid Sag files.
 
 Portable Usage
 --------------
@@ -34,7 +34,6 @@ Runs are saved to a local runs folder. Each run includes:
 - structure summary JSON
 - wavefront/fringe/Zernike outputs
 - Zemax Grid Sag DAT
-- Extended Polynomial TXT/CSV
 - full ZIP bundle
 
 Uninstall Portable Version

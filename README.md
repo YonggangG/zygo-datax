@@ -72,7 +72,7 @@ powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_portable.
 Output:
 
 ```text
-dist\release\zygo-dataX-0.1.0-portable.zip
+dist\release\zygo-dataX-0.1.1-portable.zip
 ```
 
 Use:
@@ -93,7 +93,7 @@ powershell -ExecutionPolicy Bypass -File scripts\release\build_windows_installer
 Output:
 
 ```text
-dist\installer\zygo-dataX-Setup-0.1.0.exe
+dist\installer\zygo-dataX-Setup-0.1.1.exe
 ```
 
 Use:
@@ -154,14 +154,13 @@ Output state after analysis. The page shows DATX structure, metrics, maps, summa
   - piston + tilt removed surface map
   - irregularity map with piston + tilt + power removed
   - DATX intensity fringe image
-  - summary PNG with metrics and Zernike-equivalent terms
+  - summary PNG with metrics and Noll-index Zernike-equivalent terms
 - Compute P-V, RMS, Power, Irregularity, and residual RMS.
 - Export all three Zemax map variants by default:
   - raw
   - tilt removed
   - irregularity
 - Write Zemax Grid Sag DAT files.
-- Write Zemax Extended Polynomial TXT/CSV coefficient files.
 - Run as:
   - Windows GUI launcher executable
   - Python CLI
@@ -179,7 +178,8 @@ zygo-dataX/
 ├── docs/
 │   ├── images/
 │   │   ├── web-input-autofill.png
-│   │   └── web-output-results.png
+│   │   ├── web-output-results.png
+│   │   └── zemax-grid-sag-vs-extended-polynomial.jpg
 │   ├── portainer-deployment.md
 │   ├── windows-gui.md
 │   └── windows-release.md
@@ -267,7 +267,7 @@ Main analysis flow:
    - piston + tilt for the main report map
    - piston + tilt + power for irregularity
 9. Convert native fringes to reflection surface lambda and sag in mm.
-10. Generate metrics, maps, Zernike-equivalent terms, and Zemax exports.
+10. Generate metrics, maps, Noll-index Zernike-equivalent terms, and Zemax exports.
 
 Report metrics use the reflection surface convention in lambda:
 
@@ -387,20 +387,22 @@ wavefront_report.json
 wavefront_report.html
 ```
 
+`zernike_equivalent_terms.csv` writes Noll indices 1 through 20. Each row includes radial degree `n`, azimuthal degree `m`, the normalized `Zj` expression, and fitted surface coefficients in lambda, nanometers, and sag millimeters. The fit is still a rectangular-aperture least-squares equivalent for comparison, not a strict circular-aperture Zygo coefficient table.
+
 Zemax output:
 
 ```text
 zemax_grid_sag_raw.DAT
-zemax_xy_polynomial_order4_raw.txt
-zemax_xy_polynomial_order4_raw.csv
 zemax_grid_sag_tilt_removed.DAT
-zemax_xy_polynomial_order4_tilt_removed.txt
-zemax_xy_polynomial_order4_tilt_removed.csv
 zemax_grid_sag_irregularity.DAT
-zemax_xy_polynomial_order4_irregularity.txt
-zemax_xy_polynomial_order4_irregularity.csv
 zemax_export_readme.txt
 ```
+
+Extended Polynomial export was removed in v0.1.1. In Zemax/OpticStudio import checks, Grid Sag DAT preserved the measured DATX wave-error map because it carries the sampled rectangular grid directly. Extended Polynomial instead fits a continuous parametric sag surface, which can smooth or distort local measured structure and produce a sag map that differs materially from the DATX result. For this workflow, the measured discrete map is the useful artifact, so zygo-dataX now exports Grid Sag only.
+
+The comparison below shows two Grid Sag imports on the left and center, and an Extended Polynomial import on the right. The fitted Extended Polynomial surface is visibly smoother and does not match the measured local wave-error structure.
+
+![Zemax Grid Sag vs Extended Polynomial sag map comparison](docs/images/zemax-grid-sag-vs-extended-polynomial.jpg)
 
 Web runs also include:
 
@@ -452,32 +454,6 @@ This is expected. DATX valid apertures rarely fill a perfect rectangle, while Ze
 
 Y derivative and mixed derivative signs are adjusted for Zemax's positive-Y-up row convention.
 
-## Zemax Extended Polynomial Export
-
-The TXT/CSV Extended Polynomial files are a fitted parametric approximation of the selected map. They are not a replacement for the full Grid Sag map when exact measured data is required.
-
-Conventions:
-
-- Sag is in mm.
-- Coordinates are local aperture coordinates.
-- Polynomial coordinates are normalized:
-  - `x_norm = x_mm / Rnorm`
-  - `y_norm = y_mm / Rnorm`
-- `Rnorm` is printed in the TXT file.
-- The constant/piston sag is removed and reported separately.
-- Zemax Extended Polynomial has no constant coefficient in this export.
-- Terms start at:
-  - `A1 = E1 = x`
-  - `A2 = E2 = y`
-  - `A3 = E3 = x^2`
-  - `A4 = E4 = xy`
-  - `A5 = E5 = y^2`
-
-Recommended Zemax workflow:
-
-- Use Grid Sag for exact measured square/rectangular map import.
-- Use Extended Polynomial only when a compact approximation is acceptable.
-
 ## Docker
 
 Build and run locally:
@@ -507,7 +483,7 @@ Published image:
 
 ```text
 ghcr.io/yonggangg/zygo-datax:latest
-ghcr.io/yonggangg/zygo-datax:0.1.0
+ghcr.io/yonggangg/zygo-datax:0.1.1
 ```
 
 Run directly from GHCR:
@@ -591,7 +567,6 @@ Validated locally with Side 1 and Side 4 Zygo DATX samples:
 - CLI `zemax` default all-map export.
 - Docker container health and real DATX upload.
 - Grid Sag DAT file structure and nodata rows.
-- Extended Polynomial term numbering without constant/A0 export.
 
 Current sample metrics may differ from original Zygo PDF RMS because Zygo's exact RMS mask/statistical convention is not fully exposed in the DATX file. P-V and Power have been cross-validated against the available Side 1 and Side 4 report values.
 
@@ -600,7 +575,7 @@ Current sample metrics may differ from original Zygo PDF RMS because Zygo's exac
 Current release:
 
 ```text
-v0.1.0
+v0.1.1
 ```
 
 GitHub:
@@ -620,4 +595,3 @@ ghcr.io/yonggangg/zygo-datax
 - DATX files may contain measurement metadata. Review files before sharing publicly.
 - Large DATX uploads create large run folders and ZIP files. Clean old `runs/` data periodically.
 - Confirm Zemax import behavior with a known reference sample before using exported files for formal optical design decisions.
-

@@ -21,7 +21,7 @@ APP_ROOT = Path(__file__).resolve().parents[3]
 RUN_ROOT = Path(os.environ.get("ZYGO_DATAX_RUN_ROOT", str(APP_ROOT / "runs"))).resolve()
 RUN_ROOT.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="zygo-dataX", version="0.1.0")
+app = FastAPI(title="zygo-dataX", version="0.1.1")
 
 
 def _parse_aperture(value: str) -> tuple[float, float]:
@@ -278,8 +278,6 @@ def analyze(
         downloads.extend(
             [
                 (f"{label} Grid Sag DAT", _link(run_id, "zemax", Path(result.grid_sag_dat).name)),
-                (f"{label} Extended Polynomial TXT", _link(run_id, "zemax", Path(result.xy_polynomial_txt).name)),
-                (f"{label} Extended Polynomial CSV", _link(run_id, "zemax", Path(result.xy_polynomial_csv).name)),
             ]
         )
     download_links = "".join(f"<a class='button' href='{url}'>{label}</a>" for label, url in downloads)

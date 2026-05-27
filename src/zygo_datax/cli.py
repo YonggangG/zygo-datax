@@ -37,7 +37,7 @@ def main() -> None:
     report.add_argument("--target-rms", type=float)
     report.add_argument("--target-power", type=float)
 
-    zemax = sub.add_parser("zemax", help="Export Zemax Grid Sag DAT and Extended Polynomial terms")
+    zemax = sub.add_parser("zemax", help="Export Zemax Grid Sag DAT files")
     zemax.add_argument("file")
     zemax.add_argument("--out", default="reports/zygo_datax_zemax")
     zemax.add_argument("--dataset", help="Optional exact HDF5 surface dataset path")
@@ -46,7 +46,6 @@ def main() -> None:
     zemax.add_argument("--dx-px", type=int, default=0)
     zemax.add_argument("--dy-px", type=int, default=0)
     zemax.add_argument("--edge-trim-px", type=int, default=0)
-    zemax.add_argument("--xy-order", type=int, default=4)
 
     inspect = sub.add_parser("inspect", help="Inspect DATX HDF5 structure")
     inspect.add_argument("file")
@@ -87,7 +86,6 @@ def main() -> None:
                         dx_px=args.dx_px,
                         dy_px=args.dy_px,
                         edge_trim_px=args.edge_trim_px,
-                        xy_order=args.xy_order,
                     )
                 )
                 for map_kind in ("raw", "tilt_removed", "irregularity")
@@ -103,7 +101,6 @@ def main() -> None:
                 dx_px=args.dx_px,
                 dy_px=args.dy_px,
                 edge_trim_px=args.edge_trim_px,
-                xy_order=args.xy_order,
             )
             print(json.dumps(asdict(result), indent=2))
     elif args.cmd == "inspect":
